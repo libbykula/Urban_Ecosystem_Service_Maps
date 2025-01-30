@@ -32,7 +32,7 @@ from shapely import LineString
 import statsmodels.api as sm
 from itertools import combinations
 
-os.chdir("C:/Users/kibby/OneDrive/Desktop/Research/DOI/")
+os.chdir('C:/Users/kibby/OneDrive/Desktop/Research/DOI/')
 
 def monthly_temp_degC_to_cdd(temp_series):
     # Convert average temperature from Celsius to Fahrenheit
@@ -57,7 +57,7 @@ def monthly_temp_degC_to_cdd(temp_series):
 
     return cdd_m
 
-temp_data = pd.read_csv("Data/Results/Metros/avg_temp_metros.csv") 
+temp_data = pd.read_csv('Data/Results/Metros/avg_temp_metros.csv') 
 temp_data['cdd_m'] = monthly_temp_degC_to_cdd(temp_data['Average temp (degC)'])
 
 # Add together the three months' CDD_m to get annual CDD 
@@ -91,19 +91,11 @@ print(mc)
 
 ### Fixing my energy savings valuation ### 
 
-multistate_path = 'Code/cooling workspace/3_16_2024_fixed_multistate/'
-multistate_metro_list = [
+results_path = 'InVEST Results/cooling workspace/'
+metro_list = [
     foldername
-    for foldername in os.listdir(multistate_path) 
+    for foldername in os.listdir(results_path) 
 ]
-
-singlestate_path = 'Code/cooling workspace/11_21_2023_metros/'
-singlestate_metro_list = [
-    foldername
-    for foldername in os.listdir(singlestate_path) 
-]
-
-metro_list = multistate_metro_list + singlestate_metro_list
 
 metro_list.sort()
 
@@ -114,12 +106,9 @@ build_heights = pd.read_csv('Data/Energy Consumption Table/Continental_building_
 # for c in metro_list:
 def fix_cooling_fixed(c):
     print(c)
-    if c == 'Louisville-Jefferson County, KY-IN':
-        c_orig = 'Louisville/Jefferson County, KY-IN'
-    else:
-        c_orig = c
     
-    c = re.sub(r'\/', '-', c)
+    c_orig = c
+    c = re.sub(r'\/', '-', c) # Replacing slashes with dashes for paths' sake
 
     prev_energy_table = pd.read_csv('Data/Energy Consumption Table/Metro tables/' + c + '.csv')
     prev_consump = prev_energy_table['consumption'].iloc[0]
@@ -134,40 +123,39 @@ def fix_cooling_fixed(c):
         build_temp_df = pd.read_csv('Data/Results/Metros/building_avg_temps/build_temp_w_nat_' + c + '_' + month + '.csv')
         for year in ['2001', '2011', '2021']:
             results_dict = {}
-            building_path = "Code/cooling workspace/11_21_2023_metros/" + c + "/buildings_with_stats_" + c + "_" + year + "_" + month + "_fixed.shp"
-            hm_path = 'Code/cooling workspace/11_21_2023_metros/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
+            
+            building_path = 'InVEST Results/cooling workspace/' + c + '/buildings_with_stats_' + c + '_' + year + '_' + month + '.shp'
+            hm_path = 'InVEST Results/cooling workspace/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
              
             buildings_gdf = gpd.read_file(building_path)
             buildings_gdf = buildings_gdf.to_crs('EPSG:5070')
             building_area_m2 = buildings_gdf.area 
 
             uhi_max = uhi_data['uhi'][(uhi_data['metro'] == c_orig) & (uhi_data['month'] == int(month))].iloc[0]
-
-            gdal.Warp(re.sub(r'\.(.*?)$', r"_clipped_{}.\1".format(re.sub(r'\/', '-', c)), hm_path), 
-                hm_path, cutlineDSName='Data/Polygon_vectors/Administrative_Boundaries of_National Park_System_Units/Chattahoochee River National Recreation Area_700m_buffer.gpkg', cropToCutline=True)
-            gdal.Warp(re.sub(r'.tif', r"_{}_clipped_wgs84.tif".format(c), hm_path), 
-                      re.sub(r'\.(.*?)$', r"_clipped_{}.\1".format(re.sub(r'\/', '-', c)), hm_path), dstSRS='EPSG:4326')
             
             buildings_gdf_wgs84 = buildings_gdf.to_crs('EPSG:4326')
-            buildings_gdf_wgs84.to_file(re.sub('.shp', '_Aug30_wgs84.gpkg', building_path))
+            buildings_wgs84_path = re.sub('.shp', '_fixed.gpkg', building_path)
+            buildings_gdf_wgs84.to_file(buildings_wgs84_path)
             
             t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
+            current_time = time.strftime('%H:%M:%S', t)
             print('Before zonal stats: ', current_time)
-            hm_stats = pygeo.zonal_statistics(base_raster_path_band = (re.sub(r'\.(.*?)$', r"_clipped_{}.\1".format(re.sub(r'\/', '-', c)), hm_path), 1),
-                                                        aggregate_vector_path = re.sub('.shp', '_Aug30_wgs84.gpkg', building_path),
+
+            hm_stats = pygeo.zonal_statistics(base_raster_path_band = (hm_path, 1),
+                                                        aggregate_vector_path = buildings_wgs84_path,
                                                         ignore_nodata = True)
+            
             t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
+            current_time = time.strftime('%H:%M:%S', t)
             print('After zonal stats: ', current_time)
 
             buildings_gdf['avg_cc'] = 0
-            for i in range(1, len(buildings_gdf) + 1):
+            for i in range(0, len(buildings_gdf)):
                 if hm_stats[i]['count'] >0: 
                     buildings_gdf['avg_cc'][i] = hm_stats[i]['sum']/hm_stats[i]['count']
 
             t = time.localtime()
-            current_time = time.strftime("%H:%M:%S", t)
+            current_time = time.strftime('%H:%M:%S', t)
             print('After avg cc: ', current_time)
 
             build_temp_w_nat = build_temp_df['build_temp_w_nat']
@@ -175,17 +163,9 @@ def fix_cooling_fixed(c):
             build_temp_wo_nat = build_temp_w_nat + build_deg_cooling
 
             build_consump_saved = (monthly_temp_degC_to_cdd(build_temp_wo_nat) - monthly_temp_degC_to_cdd(build_temp_w_nat))*mc 
-            buildings_gdf['sav_upd'] = build_consump_saved*building_area_m2*building_cost*avg_floors
+            buildings_gdf['sav_upd'] = build_consump_saved*building_area_m2*building_cost*avg_floors # Updated/fixed savings results
             
-            results_dict['metro'] = c
-            results_dict['year'] = year
-            results_dict['month'] = month
-            results_dict['sav_upd_sum'] = buildings_gdf['sav_upd'].sum() # Updated/fixed savings results
-
-            results_dict['energy_sav_sum'] = buildings_gdf['energy_sav'].sum() # Orginal model savings resutls for comparison
-
-            row_df = pd.DataFrame.from_dict(results_dict, orient='index') 
-            row_df.to_csv('Data/Results/Wallpapered/cooling contrib/' + c + '_' + year + '_' + month + '.csv')
+            buildings_gdf.to_file(re.sub('.shp', '_fixed.gpkg', building_path))
 
 # ### PARALLEL PROCESSING ####
 # if __name__ == '__main__':

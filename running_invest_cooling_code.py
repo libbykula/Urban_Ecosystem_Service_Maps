@@ -42,7 +42,7 @@ metro_list = vector_gdf['NAME_right'].unique().tolist()
 metro_list.sort()
 
 # Done list 
-results_path = '../Code/cooling workspace/'
+results_path = '../InVEST Results/cooling workspace/'
 done_list = [
     foldername
     for foldername in os.listdir(results_path) 
@@ -217,7 +217,7 @@ def prep_and_run_cooling(c):
                 't_air_average_radius': '600',
                 't_ref': str(rural_ref_temp),
                 'uhi_max': str(uhi),
-                'workspace_dir': '../Code/cooling workspace/' + c,
+                'workspace_dir': '../InVEST Results/cooling workspace/' + c,
                 }
             natcap.invest.urban_cooling_model.execute(args)
 
