@@ -3,7 +3,6 @@
 # Equity/InVEST proposal 
 # 11/7/2024
 # Purpose: Fixing cooling results using cooling degree days 
-# Update: reprojecting my hm rasters so that the zonal stats are correct
 
 import logging
 import numpy as np
@@ -60,7 +59,6 @@ def monthly_temp_degC_to_cdd(temp_series):
 
 temp_data = pd.read_csv("Data/Results/Metros/avg_temp_metros.csv") 
 temp_data['cdd_m'] = monthly_temp_degC_to_cdd(temp_data['Average temp (degC)'])
-# temp_data.to_csv('Data/Results/Metros/avg_temp_metros_w_cdd.csv')
 
 # Add together the three months' CDD_m to get annual CDD 
 annual_data = temp_data[['Metro', 'cdd_m']] 
@@ -76,8 +74,6 @@ for c in metro_list:
     metro_consump = pd.read_csv('Data/Energy Consumption Table/Metro tables/' + c + '.csv')
     kwh_m2_year = metro_consump['consumption'].iloc[0]
     energy_consump[c_orig] = kwh_m2_year
-
-# print(energy_consump)
 
 energy_df = pd.DataFrame.from_dict(energy_consump, orient='index', columns=['energy_consump'])
 energy_df.index.name = 'Metro'
@@ -115,11 +111,6 @@ uhi_data = pd.read_csv('Data/Results/uhi_4_29_2024_v03.csv')
 consump_fixed_table = pd.read_csv('Data/Results/Metros/consumption_fixed.csv')
 build_heights = pd.read_csv('Data/Energy Consumption Table/Continental_building_height/OutputData_CombinedModel/us/Metros/metros_build_height.csv')
 
-site_gdf = gpd.read_file('Data/Polygon_vectors/Administrative_Boundaries of_National Park_System_Units/Chattahoochee River National Recreation Area.gpkg')
-site_gdf = site_gdf.to_crs('EPSG:5070')
-site_gdf['geometry'] = site_gdf['geometry'].buffer(700) # 700m
-site_gdf.to_file('Data/Polygon_vectors/Administrative_Boundaries of_National Park_System_Units/Chattahoochee River National Recreation Area_700m_buffer.gpkg')
-
 # for c in metro_list:
 def fix_cooling_fixed(c):
     print(c)
@@ -143,18 +134,8 @@ def fix_cooling_fixed(c):
         build_temp_df = pd.read_csv('Data/Results/Metros/building_avg_temps/build_temp_w_nat_' + c + '_' + month + '.csv')
         for year in ['2001', '2011', '2021']:
             results_dict = {}
-            if c in multistate_metro_list:
-                building_path = "Code/cooling workspace/3_16_2024_fixed_multistate/" + c + "/buildings_with_stats_" + c + "_" + year + "_" + month + "_Aug30.shp"
-                hm_path = 'Code/cooling workspace/3_16_2024_fixed_multistate/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
-            elif c in ['Albuquerque, NM', 'Decatur, AL', 'San Francisco-Oakland-Berkeley, CA']:
-                building_path = "Code/cooling workspace/3_29_2024/" + c + "/buildings_with_stats_" + c + "_" + year + "_" + month + "_Aug30.gpkg"
-                hm_path = 'Code/cooling workspace/3_29_2024/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
-            elif c in ['Atlanta-Sandy Springs-Alpharetta, GA']:
-                building_path = "Code/cooling workspace/11_21_2023_metros/" + c + "/buildings_with_stats_" + c + "_2001_" + month + "_Aug30.shp"
-                hm_path = 'Code/cooling workspace/11_21_2023_metros/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
-            else:
-                building_path = "Code/cooling workspace/11_21_2023_metros/" + c + "/buildings_with_stats_" + c + "_" + year + "_" + month + "_fixed.shp"
-                hm_path = 'Code/cooling workspace/11_21_2023_metros/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
+            building_path = "Code/cooling workspace/11_21_2023_metros/" + c + "/buildings_with_stats_" + c + "_" + year + "_" + month + "_fixed.shp"
+            hm_path = 'Code/cooling workspace/11_21_2023_metros/' + c + '/hm_' + c + '_' + year + '_' + month + '.tif'
              
             buildings_gdf = gpd.read_file(building_path)
             buildings_gdf = buildings_gdf.to_crs('EPSG:5070')
@@ -199,17 +180,13 @@ def fix_cooling_fixed(c):
             results_dict['metro'] = c
             results_dict['year'] = year
             results_dict['month'] = month
-            results_dict['sav_upd_sum'] = buildings_gdf['sav_upd'].sum()
-            print(results_dict['sav_upd_sum'])
+            results_dict['sav_upd_sum'] = buildings_gdf['sav_upd'].sum() # Updated/fixed savings results
 
-            results_dict['energy_sav_sum'] = buildings_gdf['energy_sav'].sum()
+            results_dict['energy_sav_sum'] = buildings_gdf['energy_sav'].sum() # Orginal model savings resutls for comparison
 
             row_df = pd.DataFrame.from_dict(results_dict, orient='index') 
             row_df.to_csv('Data/Results/Wallpapered/cooling contrib/' + c + '_' + year + '_' + month + '.csv')
 
-# for c in metro_list:
-#     fix_cooling_fixed(c)
-        
 # ### PARALLEL PROCESSING ####
 # if __name__ == '__main__':
 #     mp.freeze_support() # This is recommended on Windows
