@@ -1,8 +1,6 @@
 # Libby Kula
-# DOI NCA
-# Equity/InVEST proposal 
 # 11/7/2024
-# Purpose: Fixing cooling results using cooling degree days 
+# Purpose: Fixing Urban InVEST urban cooling valuation results using cooling degree days method from Roxon et al., 2020
 
 import logging
 import numpy as np
