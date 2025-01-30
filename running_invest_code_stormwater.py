@@ -95,7 +95,6 @@ def run_storm_model(c):
         # Running the stormwater Urban InVEST model 
         args = {
             'adjust_retention_ratios': False,
-            # 'aggregate_areas_path': 'Polygon_vectors/' + c + '.gpkg',
             'aggregate_areas_path': city_path,   
             'biophysical_table': 'Biophysical Tables/Ecoregion-specific/' + 'biophysical_storm_' + biophys_ref + '_v02.csv',
             'lulc_path': re.sub(r'\.(.*?)$', r'_clipped_{}_nad83.\1'.format(c), nlcd_path),
@@ -106,7 +105,7 @@ def run_storm_model(c):
             'retention_radius': '',
             'road_centerlines_path': '',
             'soil_group_path': re.sub(r'\.(.*?)$', r'_clipped_{}_nad83.\1'.format(c), soil_path),
-            'workspace_dir': '../Code/stormwater workspace/normals_precip/' + c,
+            'workspace_dir': '../InVEST Results/stormwater workspace/normals_precip/' + c,
             }
         # if __name__ == '__main__':
         natcap.invest.stormwater.execute(args)
